@@ -2,170 +2,110 @@ package main
 
 import (
 	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/bcrypt"
 	"html/template"
 	"net/http"
-	"time"
 )
 
 type user struct {
 	UserName string
-	Password []byte
+	Password string
 	First    string
 	Last     string
-	Role     string
-}
-
-type session struct {
-	un           string
-	lastActivity time.Time
 }
 
 var tpl *template.Template
-var dbUsers = map[string]user{}       // user ID, user
-var dbSessions = map[string]session{} // session ID, session
-var dbSessionsCleaned time.Time
-
-const sessionLength int = 30
+var dbUsers = map[string]user{}      // user ID, user
+var dbSessions = map[string]string{} // session ID, user ID
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
-	dbSessionsCleaned = time.Now()
+	dbUsers["james@bond.com"] = user{"james@bond.com", "notstirred", "James", "Bond"} // populate our db
 }
 
 func main() {
 	http.HandleFunc("/", index)
 	http.HandleFunc("/bar", bar)
-	http.HandleFunc("/signup", signup)
 	http.HandleFunc("/login", login)
-	http.HandleFunc("/logout", logout)
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 	http.ListenAndServe(":8080", nil)
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
-	u := getUser(w, req)
-	showSessions() // for demonstration purposes
-	tpl.ExecuteTemplate(w, "index.gohtml", u)
-}
 
-func bar(w http.ResponseWriter, req *http.Request) {
-	u := getUser(w, req)
-	if !alreadyLoggedIn(w, req) {
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
+	// get cookie
+	c, err := req.Cookie("session")
+	if err != nil {
+		sID, _ := uuid.NewV4()
+		c = &http.Cookie{
+			Name:  "session",
+			Value: sID.String(),
+		}
+		http.SetCookie(w, c)
 	}
-	if u.Role != "007" {
-		http.Error(w, "You must be 007 to enter the bar", http.StatusForbidden)
-		return
-	}
-	showSessions() // for demonstration purposes
-	tpl.ExecuteTemplate(w, "bar.gohtml", u)
-}
 
-func signup(w http.ResponseWriter, req *http.Request) {
-	if alreadyLoggedIn(w, req) {
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
-	}
+	// if the user exists already, get user
 	var u user
+	if un, ok := dbSessions[c.Value]; ok {
+		u = dbUsers[un]
+	}
+
 	// process form submission
 	if req.Method == http.MethodPost {
-		// get form values
 		un := req.FormValue("username")
 		p := req.FormValue("password")
 		f := req.FormValue("firstname")
 		l := req.FormValue("lastname")
-		r := req.FormValue("role")
-		// username taken?
-		if _, ok := dbUsers[un]; ok {
-			http.Error(w, "Username already taken", http.StatusForbidden)
-			return
-		}
-		// create session
-		sID, _ := uuid.NewV4()
-		c := &http.Cookie{
-			Name:  "session",
-			Value: sID.String(),
-		}
-		c.MaxAge = sessionLength
-		http.SetCookie(w, c)
-		dbSessions[c.Value] = session{un, time.Now()}
-		// store user in dbUsers
-		bs, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.MinCost)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		u = user{un, bs, f, l, r}
+		u = user{un, p, f, l}
+		dbSessions[c.Value] = un
 		dbUsers[un] = u
-		// redirect
+	}
+
+	tpl.ExecuteTemplate(w, "index.gohtml", u)
+}
+
+func bar(w http.ResponseWriter, req *http.Request) {
+
+	// get cookie
+	c, err := req.Cookie("session")
+	if err != nil {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	showSessions() // for demonstration purposes
-	tpl.ExecuteTemplate(w, "signup.gohtml", u)
+	un, ok := dbSessions[c.Value]
+	if !ok {
+		http.Redirect(w, req, "/", http.StatusSeeOther)
+		return
+	}
+	u := dbUsers[un]
+	tpl.ExecuteTemplate(w, "bar.gohtml", u)
 }
 
 func login(w http.ResponseWriter, req *http.Request) {
-	if alreadyLoggedIn(w, req) {
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
-	}
-	var u user
-	// process form submission
+
 	if req.Method == http.MethodPost {
 		un := req.FormValue("username")
 		p := req.FormValue("password")
-		// is there a username?
+		// does this username exist
 		u, ok := dbUsers[un]
 		if !ok {
-			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
-		// does the entered password match the stored password?
-		err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
-		if err != nil {
-			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
+		// does the username/password combo have a match?
+		if u.Password != p {
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
-		// create session
+		// create a session
 		sID, _ := uuid.NewV4()
 		c := &http.Cookie{
 			Name:  "session",
 			Value: sID.String(),
 		}
-		c.MaxAge = sessionLength
 		http.SetCookie(w, c)
-		dbSessions[c.Value] = session{un, time.Now()}
+		dbSessions[c.Value] = un
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	showSessions() // for demonstration purposes
-	tpl.ExecuteTemplate(w, "login.gohtml", u)
+	tpl.ExecuteTemplate(w, "login.gohtml", nil)
 }
-
-func logout(w http.ResponseWriter, req *http.Request) {
-	if !alreadyLoggedIn(w, req) {
-		http.Redirect(w, req, "/", http.StatusSeeOther)
-		return
-	}
-	c, _ := req.Cookie("session")
-	// delete the session
-	delete(dbSessions, c.Value)
-	// remove the cookie
-	c = &http.Cookie{
-		Name:   "session",
-		Value:  "",
-		MaxAge: -1,
-	}
-	http.SetCookie(w, c)
-
-	// clean up dbSessions
-	if time.Now().Sub(dbSessionsCleaned) > (time.Second * 30) {
-		go cleanSessions()
-	}
-
-	http.Redirect(w, req, "/login", http.StatusSeeOther)
-}
-
