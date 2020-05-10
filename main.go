@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/borbert/web_dev_framework/util"
 	"html/template"
 	"net/http"
 	"time"
@@ -91,6 +92,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		c.MaxAge = sessionLength
 		http.SetCookie(w, c)
 		dbSessions[c.Value] = session{un, time.Now()}
+
 		// store user in dbUsers
 		bs, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.MinCost)
 		if err != nil {
@@ -124,6 +126,8 @@ func login(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// does the entered password match the stored password?
+		//encrypt()
+
 		err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
 		if err != nil {
 			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
