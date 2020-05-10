@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/borbert/web_dev_framework/util"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
 	"html/template"
 	"net/http"
 	"time"
@@ -95,8 +96,12 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		dbSessions[c.Value] = session{un, time.Now()}
 
 		// store user in dbUsers
-		bs := encrypt.Encrypt([]byte(p),un)
-
+		//bs := encrypt.Encrypt([]byte(p),un)
+		bs,err:=bcrypt.GenerateFromPassword([]byte(p),bcrypt.MinCost)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 		u = user{un, bs, f, l, r}
 		dbUsers[un] = u
 		// redirect
@@ -124,8 +129,8 @@ func login(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// does the entered password match the stored password?
-		hashed := encrypt.Decrypt([]byte(p),u.UserName)
-		if string(hashed) != string(dbUsers[un].Password) {
+		hashed := encrypt.Decrypt([]byte(p),un)
+		if string(hashed) != string(u.Password) {
 			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
@@ -141,9 +146,9 @@ func login(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
-	fmt.Println(u)
+
 	showSessions() // for demonstration purposes
-	tpl.ExecuteTemplate(w, "login.gohtml", u)
+	tpl.ExecuteTemplate(w, "login.gohtml",u)
 }
 
 func logout(w http.ResponseWriter, req *http.Request) {

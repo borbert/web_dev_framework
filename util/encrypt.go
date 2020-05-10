@@ -4,21 +4,18 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
 func CreateHash(key string) string {
-	hasher,err := bcrypt.GenerateFromPassword([]byte(key),bcrypt.MinCost )
-	if err != nil {
-		log.Fatal(err)
-	}
-	return hex.EncodeToString(hasher)
+	hasher := sha512.New()
+	hasher.Write([]byte(key))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func Encrypt(data []byte, passphrase string) []byte {
@@ -29,6 +26,10 @@ func Encrypt(data []byte, passphrase string) []byte {
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	return ciphertext
 }
+//func Encrypt2(data []byte, passphrase string)[]byte{
+//	cipher.text:=bcrypt.GenerateFromPassword(passphrase)
+//}
+
 func Decrypt(data []byte, passphrase string)[]byte {
 	key := []byte(CreateHash(passphrase))
 	block, _ := aes.NewCipher(key)
