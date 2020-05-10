@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"io"
 	"io/ioutil"
@@ -47,54 +48,13 @@ func DecryptFile(filename string, passphrase string)[]byte{
 	return Decrypt(data, passphrase)
 }
 
-//func main() {
-//	//fmt.Println("Encryption Program v0.01")
-//
-//	text := []byte("My Super Secret Code Stuff")
-//	key := []byte("passphrasewhichneedstobe32bytes!")
-//
-//	ciphertext := Encrypt([]byte(text), string(key))
-//	fmt.Println(string(ciphertext))
-//	plaintext := Decrypt(ciphertext, string(key))
-//	fmt.Println(string(plaintext))
-//
-//
-//	//// generate a new aes cipher using our 32 byte long key
-//	//c, err := aes.NewCipher(key)
-//	//// if there are any errors, handle them
-//	//if err != nil {
-//	//	fmt.Println(err)
-//	//}
-//	//
-//	//// gcm or Galois/Counter Mode, is a mode of operation
-//	//// for symmetric key cryptographic block ciphers
-//	//// - https://en.wikipedia.org/wiki/Galois/Counter_Mode
-//	//gcm, err := cipher.NewGCM(c)
-//	//// if any error generating new GCM
-//	//// handle them
-//	//if err != nil {
-//	//	fmt.Println(err)
-//	//}
-//	//
-//	//// creates a new byte array the size of the nonce
-//	//// which must be passed to Seal
-//	//nonce := make([]byte, gcm.NonceSize())
-//	//// populates our nonce with a cryptographically secure
-//	//// random sequence
-//	//if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-//	//	fmt.Println(err)
-//	//}
-//	//
-//	//// here we encrypt our text using the Seal function
-//	//// Seal encrypts and authenticates plaintext, authenticates the
-//	//// additional data and appends the result to dst, returning the updated
-//	//// slice. The nonce must be NonceSize() bytes long and unique for all
-//	//// time, for a given key.
-//	//
-//	//sHash:=gcm.Seal(nonce, nonce, text, nil)
-//	//
-//	//err = ioutil.WriteFile("encrypt.data", sHash,0777)
-//	//if err != nil {
-//	//	fmt.Println(err)
-//	//}
-//}
+func main(){
+	key:="test@test.test"
+	hashed:=Encrypt([]byte("1234"),key)
+	fmt.Println(hashed)
+	dehashed:=Decrypt(hashed,key)
+	fmt.Println(dehashed)
+
+}
+
+

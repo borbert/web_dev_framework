@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
 	"github.com/borbert/web_dev_framework/util"
+	"github.com/satori/go.uuid"
 	"html/template"
 	"net/http"
 	"time"
@@ -35,6 +35,7 @@ func init() {
 }
 
 func main() {
+
 	http.HandleFunc("/", index)
 	http.HandleFunc("/bar", bar)
 	http.HandleFunc("/signup", signup)
@@ -94,11 +95,8 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		dbSessions[c.Value] = session{un, time.Now()}
 
 		// store user in dbUsers
-		bs, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.MinCost)
-		if err != nil {
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		bs := encrypt.Encrypt([]byte(p),un)
+
 		u = user{un, bs, f, l, r}
 		dbUsers[un] = u
 		// redirect
@@ -122,21 +120,16 @@ func login(w http.ResponseWriter, req *http.Request) {
 		// is there a username?
 		u, ok := dbUsers[un]
 		if !ok {
-			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
+			http.Error(w, "Username not recognized", http.StatusForbidden)
 			return
 		}
 		// does the entered password match the stored password?
-		hashed := Encrypt([]byte(p),string(un+p))
-		if hashed != dbUsers[un].Password {
+		hashed := encrypt.Decrypt([]byte(p),u.UserName)
+		if string(hashed) != string(dbUsers[un].Password) {
 			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
 			return
 		}
-		err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
-		if err != nil {
-			http.Error(w, "Username and/or password do not match", http.StatusForbidden)
-			return
-		}
-		// create session
+		//new session id
 		sID, _ := uuid.NewV4()
 		c := &http.Cookie{
 			Name:  "session",
@@ -148,6 +141,7 @@ func login(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/", http.StatusSeeOther)
 		return
 	}
+	fmt.Println(u)
 	showSessions() // for demonstration purposes
 	tpl.ExecuteTemplate(w, "login.gohtml", u)
 }
@@ -168,7 +162,7 @@ func logout(w http.ResponseWriter, req *http.Request) {
 	if time.Now().Sub(dbSessionsCleaned) > (time.Second * 30) {
 		go cleanSessions()
 	}
-
+	fmt.Println(c)
 	http.Redirect(w, req, "/login", http.StatusSeeOther)
 }
 
@@ -183,3 +177,11 @@ func authorized(h http.HandlerFunc) http.HandlerFunc {
 		// code after
 	})
 }
+
+
+//err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
+//if err != nil {
+//	http.Error(w, "Username and/or password do not match", http.StatusForbidden)
+//	return
+//}
+// create session
