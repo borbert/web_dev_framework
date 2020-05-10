@@ -126,7 +126,7 @@ func login(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		// does the entered password match the stored password?
-		//encrypt()
+		encrypt()
 
 		err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
 		if err != nil {

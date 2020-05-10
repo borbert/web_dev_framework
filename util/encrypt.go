@@ -12,13 +12,13 @@ import (
 	"os"
 )
 
-func createHash(key string) string {
+func CreateHash(key string) string {
 	hasher := md5.New()
 	hasher.Write([]byte(key))
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func encrypt(data []byte, passphrase string) []byte {
+func Encrypt(data []byte, passphrase string) []byte {
 	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
 	gcm, _ := cipher.NewGCM(block)
 	nonce := make([]byte, gcm.NonceSize())
@@ -26,7 +26,7 @@ func encrypt(data []byte, passphrase string) []byte {
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	return ciphertext
 }
-func decrypt(data []byte, passphrase string)[]byte {
+func Decrypt(data []byte, passphrase string)[]byte {
 	key := []byte(createHash(passphrase))
 	block, _ := aes.NewCipher(key)
 	gcm, _ := cipher.NewGCM(block)
@@ -35,12 +35,12 @@ func decrypt(data []byte, passphrase string)[]byte {
 	plaintext, _ := gcm.Open(nil, nonce, ciphertext, nil)
 	return plaintext
 }
-func encryptFile(filename string, data []byte, passphrase string){
+func EncryptFile(filename string, data []byte, passphrase string){
 	f,_:=os.Create(filename)
 	defer f.Close()
 	f.Write(encrypt(data,passphrase))
 }
-func decryptFile(filename string, passphrase string)[]byte{
+func DecryptFile(filename string, passphrase string)[]byte{
 	data,_:=ioutil.ReadFile(filename)
 	return decrypt(data, passphrase)
 }
