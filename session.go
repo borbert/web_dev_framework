@@ -1,4 +1,5 @@
 package main
+//TODO: move into sessions directory and import into main
 
 import (
 	"fmt"

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 )
-
+//TODO:  move into models/user directory
 type user struct {
 	UserName string
 	Password []byte
@@ -17,13 +17,14 @@ type user struct {
 	Last     string
 	Role     string
 }
-
+//TODO: move into sessions module
 type session struct {
 	un           string
 	lastActivity time.Time
 }
 
 var tpl *template.Template
+//TODO:  connect to actual DB
 var dbUsers = map[string]user{}       // user ID, user
 var dbSessions = map[string]session{} // session ID, session
 var dbSessionsCleaned time.Time
@@ -183,10 +184,3 @@ func authorized(h http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-
-//err := bcrypt.CompareHashAndPassword(u.Password, []byte(p))
-//if err != nil {
-//	http.Error(w, "Username and/or password do not match", http.StatusForbidden)
-//	return
-//}
-// create session
