@@ -1,6 +1,6 @@
 package main
 
-import (
+import(
 	"fmt"
 	"github.com/borbert/web_dev_framework/util"
 	"github.com/satori/go.uuid"
@@ -24,7 +24,7 @@ type session struct {
 }
 
 var tpl *template.Template
-//TODO:  connect to actual DB
+//TODO:  connect to actual DBs
 var dbUsers = map[string]user{}       // user ID, user
 var dbSessions = map[string]session{} // session ID, session
 var dbSessionsCleaned time.Time
